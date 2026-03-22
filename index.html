@@ -1,190 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Work Tracker Ultra</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body {
-  font-family: Arial;
-  background: #020617;
-  color: white;
-  padding: 15px;
-}
-
-h1 {
-  text-align: center;
-  color: #38bdf8;
-}
-
-.box {
-  background: #0f172a;
-  padding: 15px;
-  margin: 10px 0;
-  border-radius: 14px;
-}
-
-input, button {
-  padding: 10px;
-  margin: 5px;
-  border-radius: 8px;
-  border: none;
-}
-
-button {
-  background: #38bdf8;
-  color: black;
-  font-weight: bold;
-}
-
-.progress {
-  background: #1e293b;
-  border-radius: 10px;
-  height: 20px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background: #22c55e;
-  width: 0%;
-}
-
-.stat {
-  margin: 5px 0;
-}
-
-canvas {
-  margin-top: 10px;
-  background: white;
-  border-radius: 10px;
-}
-</style>
+  <title>Work Tracker</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { color: #38bdf8; }
+    .box {
+      background: #1e293b;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 10px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background: #38bdf8;
+      color: black;
+      font-weight: bold;
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>💼 Work Tracker ULTRA</h1>
-
-<div class="box">
-  <h3>⚙️ Settings</h3>
-  <input type="number" id="rate" placeholder="€/hour">
-  <input type="number" id="target" placeholder="Target hours">
-  <button onclick="saveSettings()">Save</button>
-</div>
+<h1>💼 Work Hour Tracker</h1>
 
 <div class="box">
   <h3>Add Work</h3>
   <input type="date" id="date">
-  <input type="number" id="hours" placeholder="Hours">
+  <input type="number" id="hours" placeholder="Hours worked">
   <button onclick="addWork()">Add</button>
 </div>
 
 <div class="box">
-  <h3>📊 Dashboard</h3>
-  <div class="stat">Total Hours: <span id="total">0</span></div>
-  <div class="stat">Earnings: €<span id="earn">0</span></div>
-  <div class="stat">Remaining: <span id="remain">0</span></div>
-  <div class="stat">Daily Needed: <span id="dailyNeed">0</span></div>
-
-  <div class="progress">
-    <div class="progress-bar" id="bar"></div>
-  </div>
+  <h3>Summary</h3>
+  <p>Total Hours: <span id="totalHours">0</span></p>
+  <p>Total Earnings (€8/hr): €<span id="earnings">0</span></p>
+  <p>Target: 250 hrs</p>
+  <p>Remaining Hours: <span id="remaining">250</span></p>
 </div>
 
 <div class="box">
-  <h3>📈 Progress Chart</h3>
-  <canvas id="chart"></canvas>
+  <h3>Work Log</h3>
+  <ul id="log"></ul>
 </div>
 
 <script>
-let rate = localStorage.getItem("rate") || 8;
-let target = localStorage.getItem("target") || 250;
-let data = JSON.parse(localStorage.getItem("data")) || [];
+let totalHours = 0;
+const rate = 8;
+const target = 250;
 
-document.getElementById("rate").value = rate;
-document.getElementById("target").value = target;
+function addWork() {
+  const dateInput = document.getElementById("date").value;
+  const hours = parseFloat(document.getElementById("hours").value);
 
-function saveSettings(){
-  rate = document.getElementById("rate").value;
-  target = document.getElementById("target").value;
-  localStorage.setItem("rate", rate);
-  localStorage.setItem("target", target);
-  render();
-}
-
-function addWork(){
-  let date = document.getElementById("date").value;
-  let hours = parseFloat(document.getElementById("hours").value);
-
-  if(!date || !hours){
-    alert("Fill all fields");
+  if (!dateInput || !hours) {
+    alert("Enter date and hours!");
     return;
   }
 
-  let d = new Date(date);
-  if(d.getDay() === 0){
-    alert("❌ Sunday not allowed");
+  const selectedDate = new Date(dateInput);
+  const day = selectedDate.getDay(); // 0 = Sunday
+
+  if (day === 0) {
+    alert("❌ Sundays are not allowed!");
     return;
   }
 
-  data.push({date, hours});
-  localStorage.setItem("data", JSON.stringify(data));
-  render();
+  totalHours += hours;
+
+  document.getElementById("totalHours").innerText = totalHours;
+  document.getElementById("earnings").innerText = totalHours * rate;
+  document.getElementById("remaining").innerText = target - totalHours;
+
+  const li = document.createElement("li");
+  li.innerText = `${dateInput} - ${hours} hrs`;
+  document.getElementById("log").appendChild(li);
+
+  document.getElementById("hours").value = "";
 }
 
-function render(){
-  let total = data.reduce((sum, d)=>sum+d.hours,0);
-
-  document.getElementById("total").innerText = total;
-  document.getElementById("earn").innerText = (total*rate).toFixed(2);
-  document.getElementById("remain").innerText = target-total;
-
-  let today = new Date();
-  let end = new Date(today.getFullYear(), today.getMonth()+1, 0);
-  let daysLeft = end.getDate() - today.getDate();
-
-  let daily = daysLeft>0 ? ((target-total)/daysLeft).toFixed(2) : 0;
-  document.getElementById("dailyNeed").innerText = daily;
-
-  let percent = (total/target)*100;
-  document.getElementById("bar").style.width = percent+"%";
-
-  drawChart();
-}
-
-function drawChart(){
-  let labels = data.map(d=>d.date);
-  let values = data.map(d=>d.hours);
-
-  if(window.chart) window.chart.destroy();
-
-  window.chart = new Chart(document.getElementById("chart"), {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: "Hours Worked",
-        data: values,
-        borderWidth: 2
-      }]
-    }
-  });
-}
-
-// block sunday
-document.getElementById("date").addEventListener("input", function(){
-  let d = new Date(this.value);
-  if(d.getDay() === 0){
-    alert("Sunday disabled");
-    this.value="";
+// 🔥 Extra: Prevent selecting Sundays visually
+document.getElementById("date").addEventListener("input", function() {
+  const d = new Date(this.value);
+  if (d.getDay() === 0) {
+    alert("❌ Sundays are disabled!");
+    this.value = "";
   }
 });
-
-render();
 </script>
 
 </body>
