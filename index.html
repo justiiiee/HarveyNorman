@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Work Tracker Pro</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 15px;
+}
+
+h1 {
+  text-align: center;
+  color: #38bdf8;
+}
+
+.box {
+  background: #1e293b;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 12px;
+}
+
+input, button {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  background: #38bdf8;
+  color: black;
+  font-weight: bold;
+}
+
+.progress {
+  background: #334155;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 20px;
+  margin-top: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #22c55e;
+  width: 0%;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  background: #334155;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>💼 Work Tracker Pro</h1>
+
+<div class="box">
+  <h3>⚙️ Settings</h3>
+  <input type="number" id="rate" placeholder="€/hour">
+  <input type="number" id="target" placeholder="Target hours">
+  <button onclick="saveSettings()">Save Settings</button>
+</div>
+
+<div class="box">
+  <h3>Add Work</h3>
+  <input type="date" id="date">
+  <input type="number" id="hours" placeholder="Hours worked">
+  <button onclick="addWork()">Add</button>
+</div>
+
+<div class="box">
+  <h3>Summary</h3>
+  <p>Total Hours: <span id="totalHours">0</span></p>
+  <p>Earnings: €<span id="earnings">0</span></p>
+  <p>Target: <span id="showTarget">0</span> hrs</p>
+  <p>Remaining: <span id="remaining">0</span></p>
+
+  <div class="progress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+</div>
+
+<div class="box">
+  <h3>Work Log</h3>
+  <ul id="log"></ul>
+  <button onclick="resetData()">Reset All</button>
+</div>
+
+<script>
+// Load settings
+let rate = localStorage.getItem("rate") || 8;
+let target = localStorage.getItem("target") || 250;
+let workData = JSON.parse(localStorage.getItem("workData")) || [];
+
+document.getElementById("rate").value = rate;
+document.getElementById("target").value = target;
+
+function saveSettings() {
+  rate = document.getElementById("rate").value;
+  target = document.getElementById("target").value;
+
+  localStorage.setItem("rate", rate);
+  localStorage.setItem("target", target);
+
+  render();
+}
+
+function saveData() {
+  localStorage.setItem("workData", JSON.stringify(workData));
+}
+
+function render() {
+  let total = 0;
+  const log = document.getElementById("log");
+  log.innerHTML = "";
+
+  workData.forEach(item => {
+    total += item.hours;
+
+    const li = document.createElement("li");
+    li.innerText = item.date + " - " + item.hours + " hrs";
+    log.appendChild(li);
+  });
+
+  document.getElementById("totalHours").innerText = total;
+  document.getElementById("earnings").innerText = (total * rate).toFixed(2);
+  document.getElementById("showTarget").innerText = target;
+  document.getElementById("remaining").innerText = target - total;
+
+  let percent = (total / target) * 100;
+  document.getElementById("progressBar").style.width = percent + "%";
+}
+
+function addWork() {
+  const date = document.getElementById("date").value;
+  const hours = parseFloat(document.getElementById("hours").value);
+
+  if (!date || !hours) {
+    alert("Enter date and hours!");
+    return;
+  }
+
+  const d = new Date(date);
+
+  if (d.getDay() === 0) {
+    alert("❌ Sunday not allowed!");
+    return;
+  }
+
+  workData.push({ date, hours });
+  saveData();
+  render();
+
+  document.getElementById("hours").value = "";
+}
+
+// Block Sundays
+document.getElementById("date").addEventListener("input", function () {
+  const d = new Date(this.value);
+  if (d.getDay() === 0) {
+    alert("❌ Sunday disabled!");
+    this.value = "";
+  }
+});
+
+function resetData() {
+  if (confirm("Clear all data?")) {
+    workData = [];
+    saveData();
+    render();
+  }
+}
+
+render();
+</script>
+
+</body>
+</html>
