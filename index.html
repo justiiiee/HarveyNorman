@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#38bdf8">
+
+<!-- PDF LIB -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Work Tracker Pro v2</title>
+<title>Work Tracker Pro</title>
 
 <style>
-body {
-  font-family: Arial;
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-}
-
 :root {
   --bg: #0f172a;
   --text: white;
@@ -25,6 +26,14 @@ body {
   --card: white;
 }
 
+body {
+  font-family: Arial;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 10px;
+}
+
 h1 {
   text-align: center;
 }
@@ -32,7 +41,7 @@ h1 {
 .box {
   background: var(--card);
   padding: 15px;
-  margin: 10px;
+  margin: 10px 0;
   border-radius: 12px;
 }
 
@@ -74,14 +83,16 @@ button {
   background: #334155;
 }
 
-.worked { background: green; }
-
+.worked {
+  background: green;
+}
 </style>
+
 </head>
 
 <body>
 
-<h1>💼 Work Tracker Pro v2</h1>
+<h1>💼 Work Tracker Pro</h1>
 
 <div class="box">
 <button onclick="toggleTheme()">🌙 Toggle Theme</button>
@@ -103,7 +114,7 @@ button {
 
 <div class="box">
 <h3>Summary</h3>
-<p>Total: <span id="total"></span></p>
+<p>Total Hours: <span id="total"></span></p>
 <p>Earnings: €<span id="earn"></span></p>
 <p>Prediction: €<span id="predict"></span></p>
 <div class="progress"><div class="progress-bar" id="bar"></div></div>
@@ -115,7 +126,7 @@ button {
 </div>
 
 <div class="box">
-<h3>Log</h3>
+<h3>Work Log</h3>
 <ul id="log"></ul>
 </div>
 
@@ -124,6 +135,8 @@ button {
 </div>
 
 <script>
+
+// STORAGE
 let rate = localStorage.getItem("rate") || 8;
 let target = localStorage.getItem("target") || 200;
 let data = JSON.parse(localStorage.getItem("data")) || [];
@@ -143,14 +156,15 @@ function save() {
   localStorage.setItem("data", JSON.stringify(data));
 }
 
+// ADD WORK + BRO MOTIVATION
 function addWork() {
   let date = document.getElementById("date").value;
   let hours = parseFloat(document.getElementById("hours").value);
 
-  if (!date || !hours) return alert("Enter all");
+  if (!date || !hours) return alert("Enter all fields");
 
   let d = new Date(date);
-  if (d.getDay() === 0) return alert("No Sunday");
+  if (d.getDay() === 0) return alert("❌ Sunday not allowed");
 
   if (hours < 5) alert("NO WORRY BRO WE CAN KEEP IT FUTURE DAYS");
   else if (hours < 6) alert("GOOD BRO");
@@ -162,12 +176,7 @@ function addWork() {
   render();
 }
 
-function deleteItem(i) {
-  data.splice(i,1);
-  save();
-  render();
-}
-
+// EDIT
 function editItem(i) {
   let h = prompt("Edit hours", data[i].hours);
   if (h) {
@@ -177,63 +186,109 @@ function editItem(i) {
   }
 }
 
+// DELETE
+function deleteItem(i) {
+  data.splice(i, 1);
+  save();
+  render();
+}
+
+// RENDER
 function render() {
   let total = 0;
   let log = document.getElementById("log");
   log.innerHTML = "";
 
   let month = new Date().getMonth();
-
   let filtered = data.filter(d => new Date(d.date).getMonth() === month);
 
-  filtered.forEach((d,i)=>{
+  filtered.forEach((d,i) => {
     total += d.hours;
     let li = document.createElement("li");
-    li.innerHTML = `${d.date} - ${d.hours}h <button onclick="editItem(${i})">✏️</button> <button onclick="deleteItem(${i})">❌</button>`;
+    li.innerHTML = `${d.date} - ${d.hours}h 
+    <button onclick="editItem(${i})">✏️</button> 
+    <button onclick="deleteItem(${i})">❌</button>`;
     log.appendChild(li);
   });
 
   document.getElementById("total").innerText = total;
-  document.getElementById("earn").innerText = (total*rate).toFixed(2);
+  document.getElementById("earn").innerText = (total * rate).toFixed(2);
 
   let avg = total / (filtered.length || 1);
   let predict = avg * 26;
-  document.getElementById("predict").innerText = (predict*rate).toFixed(2);
 
-  document.getElementById("bar").style.width = (total/target*100)+"%";
+  document.getElementById("predict").innerText = (predict * rate).toFixed(2);
+  document.getElementById("bar").style.width = (total/target*100) + "%";
 
   renderCalendar(filtered);
 }
 
+// CALENDAR
 function renderCalendar(data) {
   let cal = document.getElementById("calendar");
   cal.innerHTML = "";
 
-  for(let i=1;i<=30;i++){
+  for (let i=1;i<=31;i++) {
     let div = document.createElement("div");
-    div.className="day";
+    div.className = "day";
 
-    let found = data.find(d=> new Date(d.date).getDate()===i);
-    if(found) div.classList.add("worked");
+    let found = data.find(d => new Date(d.date).getDate() === i);
+    if (found) div.classList.add("worked");
 
     div.innerText = i;
     cal.appendChild(div);
   }
 }
 
-function toggleTheme(){
+// THEME
+function toggleTheme() {
   document.body.classList.toggle("light");
 }
 
-function exportPDF(){
-  let content = "Work Report\n";
-  data.forEach(d=> content += `${d.date} - ${d.hours}h\n`);
+// PDF PAYSLIP
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
 
-  let blob = new Blob([content], {type:"text/plain"});
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "report.txt";
-  a.click();
+  let month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  let totalHours = 0;
+
+  doc.setFontSize(18);
+  doc.text("WORK PAYSLIP", 20, 20);
+
+  doc.setFontSize(12);
+  doc.text(`Month: ${month}`, 20, 30);
+  doc.text(`Rate: €${rate}/hr`, 20, 37);
+
+  let y = 50;
+  doc.text("Date | Hours | Earnings", 20, y);
+  y += 5;
+
+  data.forEach(d => {
+    totalHours += d.hours;
+    let earn = (d.hours * rate).toFixed(2);
+    doc.text(`${d.date} | ${d.hours}h | €${earn}`, 20, y);
+    y += 7;
+  });
+
+  let totalEarn = totalHours * rate;
+  let avg = totalHours / (data.length || 1);
+
+  y += 10;
+  doc.text(`Total Hours: ${totalHours}`, 20, y);
+  y += 7;
+  doc.text(`Average: ${avg.toFixed(2)} hrs`, 20, y);
+  y += 7;
+  doc.text(`Total Earnings: €${totalEarn.toFixed(2)}`, 20, y);
+
+  y += 10;
+
+  if (totalHours > 200) doc.text("INSANE WORK BRO 🔥", 20, y);
+  else if (totalHours > 150) doc.text("GREAT CONSISTENCY BRO 💪", 20, y);
+  else doc.text("KEEP PUSHING BRO ⚡", 20, y);
+
+  doc.save(`Payslip_${month}.pdf`);
 }
 
 // PWA
@@ -242,6 +297,7 @@ if ('serviceWorker' in navigator) {
 }
 
 render();
+
 </script>
 
 </body>
