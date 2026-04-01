@@ -1,35 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Work Tracker Pro</title>
+<title>Work Tracker Pro v2</title>
 
 <style>
 body {
   font-family: Arial;
-  background: #0f172a;
-  color: white;
-  padding: 15px;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+:root {
+  --bg: #0f172a;
+  --text: white;
+  --card: #1e293b;
+}
+
+.light {
+  --bg: #f1f5f9;
+  --text: black;
+  --card: white;
 }
 
 h1 {
   text-align: center;
-  color: #38bdf8;
 }
 
 .box {
-  background: #1e293b;
+  background: var(--card);
   padding: 15px;
-  margin: 10px 0;
+  margin: 10px;
   border-radius: 12px;
 }
 
-input, button {
+button, input {
   padding: 10px;
   margin: 5px;
   border-radius: 8px;
@@ -38,79 +45,88 @@ input, button {
 
 button {
   background: #38bdf8;
-  color: black;
   font-weight: bold;
 }
 
 .progress {
   background: #334155;
+  height: 20px;
   border-radius: 10px;
   overflow: hidden;
-  height: 20px;
-  margin-top: 10px;
 }
 
 .progress-bar {
   height: 100%;
-  background: #22c55e;
+  background: linear-gradient(to right, #22c55e, #4ade80);
   width: 0%;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
 }
 
-li {
-  background: #334155;
-  margin: 5px 0;
+.day {
   padding: 10px;
+  text-align: center;
   border-radius: 8px;
+  background: #334155;
 }
+
+.worked { background: green; }
+
 </style>
 </head>
 
 <body>
 
-<h1>💼 Work Tracker Pro</h1>
+<h1>💼 Work Tracker Pro v2</h1>
 
 <div class="box">
-  <h3>⚙️ Settings</h3>
-  <input type="number" id="rate" placeholder="€/hour">
-  <input type="number" id="target" placeholder="Target hours">
-  <button onclick="saveSettings()">Save Settings</button>
+<button onclick="toggleTheme()">🌙 Toggle Theme</button>
 </div>
 
 <div class="box">
-  <h3>Add Work</h3>
-  <input type="date" id="date">
-  <input type="number" id="hours" placeholder="Hours worked">
-  <button onclick="addWork()">Add</button>
+<h3>Settings</h3>
+<input type="number" id="rate" placeholder="€/hour">
+<input type="number" id="target" placeholder="Target hours">
+<button onclick="saveSettings()">Save</button>
 </div>
 
 <div class="box">
-  <h3>Summary</h3>
-  <p>Total Hours: <span id="totalHours">0</span></p>
-  <p>Earnings: €<span id="earnings">0</span></p>
-  <p>Target: <span id="showTarget">0</span> hrs</p>
-  <p>Remaining: <span id="remaining">0</span></p>
-
-  <div class="progress">
-    <div class="progress-bar" id="progressBar"></div>
-  </div>
+<h3>Add Work</h3>
+<input type="date" id="date">
+<input type="number" id="hours" placeholder="Hours">
+<button onclick="addWork()">Add</button>
 </div>
 
 <div class="box">
-  <h3>Work Log</h3>
-  <ul id="log"></ul>
-  <button onclick="resetData()">Reset All</button>
+<h3>Summary</h3>
+<p>Total: <span id="total"></span></p>
+<p>Earnings: €<span id="earn"></span></p>
+<p>Prediction: €<span id="predict"></span></p>
+<div class="progress"><div class="progress-bar" id="bar"></div></div>
+</div>
+
+<div class="box">
+<h3>Calendar</h3>
+<div class="calendar" id="calendar"></div>
+</div>
+
+<div class="box">
+<h3>Log</h3>
+<ul id="log"></ul>
+</div>
+
+<div class="box">
+<button onclick="exportPDF()">📄 Generate Payslip</button>
 </div>
 
 <script>
-// Load settings
 let rate = localStorage.getItem("rate") || 8;
-let target = localStorage.getItem("target") || 250;
-let workData = JSON.parse(localStorage.getItem("workData")) || [];
+let target = localStorage.getItem("target") || 200;
+let data = JSON.parse(localStorage.getItem("data")) || [];
 
 document.getElementById("rate").value = rate;
 document.getElementById("target").value = target;
@@ -118,77 +134,111 @@ document.getElementById("target").value = target;
 function saveSettings() {
   rate = document.getElementById("rate").value;
   target = document.getElementById("target").value;
-
   localStorage.setItem("rate", rate);
   localStorage.setItem("target", target);
-
   render();
 }
 
-function saveData() {
-  localStorage.setItem("workData", JSON.stringify(workData));
+function save() {
+  localStorage.setItem("data", JSON.stringify(data));
+}
+
+function addWork() {
+  let date = document.getElementById("date").value;
+  let hours = parseFloat(document.getElementById("hours").value);
+
+  if (!date || !hours) return alert("Enter all");
+
+  let d = new Date(date);
+  if (d.getDay() === 0) return alert("No Sunday");
+
+  if (hours < 5) alert("NO WORRY BRO WE CAN KEEP IT FUTURE DAYS");
+  else if (hours < 6) alert("GOOD BRO");
+  else if (hours > 10) alert("PWOLI BRO 🔥");
+  else if (hours > 8) alert("GREAT BRO 💪");
+
+  data.push({date, hours});
+  save();
+  render();
+}
+
+function deleteItem(i) {
+  data.splice(i,1);
+  save();
+  render();
+}
+
+function editItem(i) {
+  let h = prompt("Edit hours", data[i].hours);
+  if (h) {
+    data[i].hours = parseFloat(h);
+    save();
+    render();
+  }
 }
 
 function render() {
   let total = 0;
-  const log = document.getElementById("log");
+  let log = document.getElementById("log");
   log.innerHTML = "";
 
-  workData.forEach(item => {
-    total += item.hours;
+  let month = new Date().getMonth();
 
-    const li = document.createElement("li");
-    li.innerText = item.date + " - " + item.hours + " hrs";
+  let filtered = data.filter(d => new Date(d.date).getMonth() === month);
+
+  filtered.forEach((d,i)=>{
+    total += d.hours;
+    let li = document.createElement("li");
+    li.innerHTML = `${d.date} - ${d.hours}h <button onclick="editItem(${i})">✏️</button> <button onclick="deleteItem(${i})">❌</button>`;
     log.appendChild(li);
   });
 
-  document.getElementById("totalHours").innerText = total;
-  document.getElementById("earnings").innerText = (total * rate).toFixed(2);
-  document.getElementById("showTarget").innerText = target;
-  document.getElementById("remaining").innerText = target - total;
+  document.getElementById("total").innerText = total;
+  document.getElementById("earn").innerText = (total*rate).toFixed(2);
 
-  let percent = (total / target) * 100;
-  document.getElementById("progressBar").style.width = percent + "%";
+  let avg = total / (filtered.length || 1);
+  let predict = avg * 26;
+  document.getElementById("predict").innerText = (predict*rate).toFixed(2);
+
+  document.getElementById("bar").style.width = (total/target*100)+"%";
+
+  renderCalendar(filtered);
 }
 
-function addWork() {
-  const date = document.getElementById("date").value;
-  const hours = parseFloat(document.getElementById("hours").value);
+function renderCalendar(data) {
+  let cal = document.getElementById("calendar");
+  cal.innerHTML = "";
 
-  if (!date || !hours) {
-    alert("Enter date and hours!");
-    return;
+  for(let i=1;i<=30;i++){
+    let div = document.createElement("div");
+    div.className="day";
+
+    let found = data.find(d=> new Date(d.date).getDate()===i);
+    if(found) div.classList.add("worked");
+
+    div.innerText = i;
+    cal.appendChild(div);
   }
-
-  const d = new Date(date);
-
-  if (d.getDay() === 0) {
-    alert("❌ Sunday not allowed!");
-    return;
-  }
-
-  workData.push({ date, hours });
-  saveData();
-  render();
-
-  document.getElementById("hours").value = "";
 }
 
-// Block Sundays
-document.getElementById("date").addEventListener("input", function () {
-  const d = new Date(this.value);
-  if (d.getDay() === 0) {
-    alert("❌ Sunday disabled!");
-    this.value = "";
-  }
-});
+function toggleTheme(){
+  document.body.classList.toggle("light");
+}
 
-function resetData() {
-  if (confirm("Clear all data?")) {
-    workData = [];
-    saveData();
-    render();
-  }
+function exportPDF(){
+  let content = "Work Report\n";
+  data.forEach(d=> content += `${d.date} - ${d.hours}h\n`);
+
+  let blob = new Blob([content], {type:"text/plain"});
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "report.txt";
+  a.click();
+}
+
+// PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
 }
 
 render();
