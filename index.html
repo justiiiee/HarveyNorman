@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
 
-<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#38bdf8">
 
-<!-- PDF LIB -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <meta charset="UTF-8">
@@ -34,9 +32,7 @@ body {
   padding: 10px;
 }
 
-h1 {
-  text-align: center;
-}
+h1 { text-align: center; }
 
 .box {
   background: var(--card);
@@ -61,13 +57,11 @@ button {
   background: #334155;
   height: 20px;
   border-radius: 10px;
-  overflow: hidden;
 }
 
 .progress-bar {
   height: 100%;
   background: linear-gradient(to right, #22c55e, #4ade80);
-  width: 0%;
 }
 
 .calendar {
@@ -83,8 +77,12 @@ button {
   background: #334155;
 }
 
-.worked {
-  background: green;
+.worked { background: green; }
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>
 
@@ -121,7 +119,11 @@ button {
 </div>
 
 <div class="box">
-<h3>Calendar</h3>
+<div class="nav">
+<button onclick="changeMonth(-1)">⬅️</button>
+<h3 id="monthTitle"></h3>
+<button onclick="changeMonth(1)">➡️</button>
+</div>
 <div class="calendar" id="calendar"></div>
 </div>
 
@@ -136,15 +138,22 @@ button {
 
 <script>
 
-// STORAGE
 let rate = localStorage.getItem("rate") || 8;
 let target = localStorage.getItem("target") || 200;
 let data = JSON.parse(localStorage.getItem("data")) || [];
 
+// MONTH CONTROL
+let currentDate = new Date();
+
 document.getElementById("rate").value = rate;
 document.getElementById("target").value = target;
 
-function saveSettings() {
+function changeMonth(step){
+  currentDate.setMonth(currentDate.getMonth() + step);
+  render();
+}
+
+function saveSettings(){
   rate = document.getElementById("rate").value;
   target = document.getElementById("target").value;
   localStorage.setItem("rate", rate);
@@ -152,19 +161,18 @@ function saveSettings() {
   render();
 }
 
-function save() {
+function save(){
   localStorage.setItem("data", JSON.stringify(data));
 }
 
-// ADD WORK + BRO MOTIVATION
-function addWork() {
+function addWork(){
   let date = document.getElementById("date").value;
   let hours = parseFloat(document.getElementById("hours").value);
 
-  if (!date || !hours) return alert("Enter all fields");
+  if (!date || !hours) return alert("Enter all");
 
   let d = new Date(date);
-  if (d.getDay() === 0) return alert("❌ Sunday not allowed");
+  if (d.getDay() === 0) return alert("No Sunday");
 
   if (hours < 5) alert("NO WORRY BRO WE CAN KEEP IT FUTURE DAYS");
   else if (hours < 6) alert("GOOD BRO");
@@ -176,123 +184,108 @@ function addWork() {
   render();
 }
 
-// EDIT
-function editItem(i) {
+function editItem(i){
   let h = prompt("Edit hours", data[i].hours);
-  if (h) {
+  if (h){
     data[i].hours = parseFloat(h);
     save();
     render();
   }
 }
 
-// DELETE
-function deleteItem(i) {
-  data.splice(i, 1);
+function deleteItem(i){
+  data.splice(i,1);
   save();
   render();
 }
 
-// RENDER
-function render() {
+function render(){
   let total = 0;
   let log = document.getElementById("log");
   log.innerHTML = "";
 
-  let month = new Date().getMonth();
-  let filtered = data.filter(d => new Date(d.date).getMonth() === month);
+  let month = currentDate.getMonth();
+  let year = currentDate.getFullYear();
 
-  filtered.forEach((d,i) => {
+  let filtered = data.filter(d => {
+    let dt = new Date(d.date);
+    return dt.getMonth() === month && dt.getFullYear() === year;
+  });
+
+  filtered.forEach((d,i)=>{
     total += d.hours;
     let li = document.createElement("li");
     li.innerHTML = `${d.date} - ${d.hours}h 
-    <button onclick="editItem(${i})">✏️</button> 
+    <button onclick="editItem(${i})">✏️</button>
     <button onclick="deleteItem(${i})">❌</button>`;
     log.appendChild(li);
   });
 
   document.getElementById("total").innerText = total;
-  document.getElementById("earn").innerText = (total * rate).toFixed(2);
+  document.getElementById("earn").innerText = (total*rate).toFixed(2);
 
-  let avg = total / (filtered.length || 1);
-  let predict = avg * 26;
+  let avg = total/(filtered.length||1);
+  let predict = avg*26;
+  document.getElementById("predict").innerText = (predict*rate).toFixed(2);
 
-  document.getElementById("predict").innerText = (predict * rate).toFixed(2);
-  document.getElementById("bar").style.width = (total/target*100) + "%";
+  document.getElementById("bar").style.width = (total/target*100)+"%";
 
-  renderCalendar(filtered);
+  let monthName = currentDate.toLocaleString('default',{month:'long',year:'numeric'});
+  document.getElementById("monthTitle").innerText = monthName;
+
+  renderCalendar(filtered, month, year);
 }
 
-// CALENDAR
-function renderCalendar(data) {
+function renderCalendar(data, month, year){
   let cal = document.getElementById("calendar");
   cal.innerHTML = "";
 
-  for (let i=1;i<=31;i++) {
+  let days = new Date(year, month+1, 0).getDate();
+
+  for(let i=1;i<=days;i++){
     let div = document.createElement("div");
-    div.className = "day";
+    div.className="day";
 
-    let found = data.find(d => new Date(d.date).getDate() === i);
-    if (found) div.classList.add("worked");
+    let found = data.find(d=> new Date(d.date).getDate()===i);
+    if(found) div.classList.add("worked");
 
-    div.innerText = i;
+    div.innerText=i;
     cal.appendChild(div);
   }
 }
 
-// THEME
-function toggleTheme() {
+function toggleTheme(){
   document.body.classList.toggle("light");
 }
 
-// PDF PAYSLIP
-function exportPDF() {
+// PDF
+function exportPDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  let month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+  let month = currentDate.toLocaleString('default',{month:'long',year:'numeric'});
 
-  let totalHours = 0;
+  let total=0;
+  let y=20;
 
-  doc.setFontSize(18);
-  doc.text("WORK PAYSLIP", 20, 20);
+  doc.text("WORK PAYSLIP",20,y); y+=10;
+  doc.text("Month: "+month,20,y); y+=10;
 
-  doc.setFontSize(12);
-  doc.text(`Month: ${month}`, 20, 30);
-  doc.text(`Rate: €${rate}/hr`, 20, 37);
-
-  let y = 50;
-  doc.text("Date | Hours | Earnings", 20, y);
-  y += 5;
-
-  data.forEach(d => {
-    totalHours += d.hours;
-    let earn = (d.hours * rate).toFixed(2);
-    doc.text(`${d.date} | ${d.hours}h | €${earn}`, 20, y);
-    y += 7;
+  data.forEach(d=>{
+    total+=d.hours;
+    doc.text(`${d.date} | ${d.hours}h | €${(d.hours*rate).toFixed(2)}`,20,y);
+    y+=7;
   });
 
-  let totalEarn = totalHours * rate;
-  let avg = totalHours / (data.length || 1);
+  y+=10;
+  doc.text("Total: "+total+" hrs",20,y); y+=7;
+  doc.text("Earnings: €"+(total*rate).toFixed(2),20,y);
 
-  y += 10;
-  doc.text(`Total Hours: ${totalHours}`, 20, y);
-  y += 7;
-  doc.text(`Average: ${avg.toFixed(2)} hrs`, 20, y);
-  y += 7;
-  doc.text(`Total Earnings: €${totalEarn.toFixed(2)}`, 20, y);
-
-  y += 10;
-
-  if (totalHours > 200) doc.text("INSANE WORK BRO 🔥", 20, y);
-  else if (totalHours > 150) doc.text("GREAT CONSISTENCY BRO 💪", 20, y);
-  else doc.text("KEEP PUSHING BRO ⚡", 20, y);
-
-  doc.save(`Payslip_${month}.pdf`);
+  doc.save("Payslip_"+month+".pdf");
 }
 
 // PWA
-if ('serviceWorker' in navigator) {
+if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
 }
 
