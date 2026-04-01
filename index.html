@@ -133,6 +133,11 @@ button {
 </div>
 
 <div class="box">
+  <h3>🚌 Live Bus</h3>
+  <p id="busInfo">Loading...</p>
+</div>
+  
+<div class="box">
 <button onclick="exportPDF()">📄 Generate Payslip</button>
 </div>
 
@@ -258,6 +263,95 @@ function toggleTheme(){
   document.body.classList.toggle("light");
 }
 
+
+// =======================
+// 🚌 BUS TIMETABLE SETUP
+// =======================
+
+// Weekdays (Mon–Fri)
+const toWorkWeekday = [
+  "05:38","06:08","06:38","07:08","07:38","08:08"
+];
+
+const toHomeWeekday = [
+  "15:48","16:18","16:48","17:18","17:48","18:18","18:48"
+];
+
+// Saturday
+const toWorkSaturday = [
+  "06:08","07:08","08:08","09:08"
+];
+
+const toHomeSaturday = [
+  "13:38","15:08","17:08","20:08"
+];
+
+// =======================
+// ⏱️ GET LIVE BUS (COUNTDOWN)
+// =======================
+function getLiveBus(times){
+  let now = new Date();
+  let current = now.getHours()*60 + now.getMinutes();
+
+  for(let t of times){
+    let [h,m] = t.split(":");
+    let busTime = parseInt(h)*60 + parseInt(m);
+
+    let diff = busTime - current;
+
+    if(diff > 0){
+      if(diff <= 1) return `🟢 Bus arriving now`;
+      if(diff < 5) return `⚡ Bus in ${diff} min`;
+      return `🚌 Bus in ${diff} min (${t})`;
+    }
+  }
+
+  return "❌ No more buses today";
+}
+
+// =======================
+// 🧠 SMART LOGIC (DAY + TIME)
+// =======================
+function updateBus(){
+  let now = new Date();
+  let day = now.getDay(); // 0=Sun, 6=Sat
+  let hour = now.getHours();
+
+  let message = "";
+
+  // ❌ Sunday
+  if(day === 0){
+    message = "😴 Sunday bro — no work";
+  }
+
+  // 🟡 Saturday
+  else if(day === 6){
+    if(hour < 12){
+      message = "🚌 Saturday Work: " + getLiveBus(toWorkSaturday);
+    } else {
+      message = "🏠 Saturday Home: " + getLiveBus(toHomeSaturday);
+    }
+  }
+
+  // 🟢 Weekdays
+  else {
+    if(hour < 12){
+      message = "🚀 Work Bus: " + getLiveBus(toWorkWeekday);
+    } else {
+      message = "🏠 Home Bus: " + getLiveBus(toHomeWeekday);
+    }
+  }
+
+  document.getElementById("busInfo").innerText = message;
+}
+
+// =======================
+// 🔁 AUTO UPDATE
+// =======================
+setInterval(updateBus, 60000);
+updateBus();
+
+  
 // PDF
 function exportPDF(){
   const { jsPDF } = window.jspdf;
@@ -284,6 +378,7 @@ function exportPDF(){
   doc.save("Payslip_"+month+".pdf");
 }
 
+  
 // PWA
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
