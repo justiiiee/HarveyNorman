@@ -6,379 +6,309 @@
 <meta name="theme-color" content="#38bdf8">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Work Tracker Pro</title>
 
 <style>
-:root {
-  --bg: #0f172a;
-  --text: white;
-  --card: #1e293b;
-}
+:root { --bg:#0f172a; --text:white; --card:#1e293b; }
+.light { --bg:#f1f5f9; --text:black; --card:white; }
 
-.light {
-  --bg: #f1f5f9;
-  --text: black;
-  --card: white;
-}
+body { font-family:Arial; background:var(--bg); color:var(--text); margin:0; padding:10px; }
 
-body {
-  font-family: Arial;
-  background: var(--bg);
-  color: var(--text);
-  margin: 0;
-  padding: 10px;
-}
+.box { background:var(--card); padding:15px; margin:10px 0; border-radius:12px; }
 
-h1 { text-align: center; }
+button,input { padding:10px; margin:5px; border-radius:8px; border:none; }
+button { background:#38bdf8; font-weight:bold; }
 
-.box {
-  background: var(--card);
-  padding: 15px;
-  margin: 10px 0;
-  border-radius: 12px;
-}
+.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.day { padding:10px; background:#334155; text-align:center; border-radius:8px; }
+.worked { background:green; }
 
-button, input {
-  padding: 10px;
-  margin: 5px;
-  border-radius: 8px;
-  border: none;
-}
+.progress { background:#334155; height:20px; border-radius:10px; }
+.progress-bar { height:100%; background:lime; }
 
-button {
-  background: #38bdf8;
-  font-weight: bold;
-}
-
-.progress {
-  background: #334155;
-  height: 20px;
-  border-radius: 10px;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(to right, #22c55e, #4ade80);
-}
-
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-}
-
-.day {
-  padding: 10px;
-  text-align: center;
-  border-radius: 8px;
-  background: #334155;
-}
-
-.worked { background: green; }
-
-.nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.nav { display:flex; justify-content:space-between; }
 </style>
 
 </head>
 
 <body>
 
-<h1>💼 Work Tracker 2.O</h1>
+<h1>💼 Work Tracker Pro</h1>
 
 <div class="box">
-<button onclick="toggleTheme()">🌙 Toggle Theme</button>
+<button onclick="toggleTheme()">🌙 Theme</button>
 </div>
 
 <div class="box">
-<h3>Settings</h3>
-<input type="number" id="rate" placeholder="€/hour">
-<input type="number" id="target" placeholder="Target hours">
+<input id="rate" placeholder="€/hr">
+<input id="target" placeholder="Target hrs">
 <button onclick="saveSettings()">Save</button>
 </div>
 
 <div class="box">
-<h3>Add Work</h3>
 <input type="date" id="date">
-<input type="number" id="hours" placeholder="Hours">
+<input id="hours" placeholder="Hours">
 <button onclick="addWork()">Add</button>
 </div>
 
 <div class="box">
-<h3>Summary</h3>
-<p>Total Hours: <span id="total"></span></p>
-<p>Earnings: €<span id="earn"></span></p>
-<p>Prediction: €<span id="predict"></span></p>
-<div class="progress"><div class="progress-bar" id="bar"></div></div>
+<p>Total: <span id="total"></span></p>
+<p>Earn: €<span id="earn"></span></p>
+<p>Predict: €<span id="predict"></span></p>
+<p>🔥 Streak: <span id="streak"></span> days</p>
+<div class="progress"><div id="bar" class="progress-bar"></div></div>
 </div>
 
-<div class="box">
-<div class="nav">
+<div class="box nav">
 <button onclick="changeMonth(-1)">⬅️</button>
 <h3 id="monthTitle"></h3>
 <button onclick="changeMonth(1)">➡️</button>
 </div>
-<div class="calendar" id="calendar"></div>
+
+<div class="box"><div id="calendar" class="calendar"></div></div>
+
+<div class="box">
+<h3>🚌 Live Bus</h3>
+<p id="busInfo"></p>
 </div>
 
 <div class="box">
-<h3>Work Log</h3>
+<h3>📊 Analytics</h3>
+<canvas id="weeklyChart"></canvas>
+<p id="bestDay"></p>
+</div>
+
+<div class="box">
+<h3>🎯 Goal Tracking</h3>
+<canvas id="goalChart"></canvas>
+<p id="goalMsg"></p>
+</div>
+
+<div class="box">
+<h3>💸 Earnings Goal</h3>
+<canvas id="moneyChart"></canvas>
+</div>
+
+<div class="box">
+<h3>🏆 Achievements</h3>
+<p id="badges"></p>
+</div>
+
+<div class="box">
 <ul id="log"></ul>
 </div>
 
 <div class="box">
-  <h3>🚌 Live Bus</h3>
-  <p id="busInfo">Loading...</p>
-</div>
-  
-<div class="box">
-<button onclick="exportPDF()">📄 Generate Payslip</button>
+<button onclick="exportPDF()">📄 Payslip</button>
 </div>
 
 <script>
 
-let rate = localStorage.getItem("rate") || 8;
-let target = localStorage.getItem("target") || 200;
-let data = JSON.parse(localStorage.getItem("data")) || [];
-
-// MONTH CONTROL
+let rate = localStorage.getItem("rate")||8;
+let target = localStorage.getItem("target")||200;
+let data = JSON.parse(localStorage.getItem("data"))||[];
 let currentDate = new Date();
 
-document.getElementById("rate").value = rate;
-document.getElementById("target").value = target;
-
-function changeMonth(step){
-  currentDate.setMonth(currentDate.getMonth() + step);
-  render();
-}
+rate.value = rate;
+target.value = target;
 
 function saveSettings(){
   rate = document.getElementById("rate").value;
   target = document.getElementById("target").value;
-  localStorage.setItem("rate", rate);
-  localStorage.setItem("target", target);
+  localStorage.setItem("rate",rate);
+  localStorage.setItem("target",target);
   render();
 }
 
-function save(){
-  localStorage.setItem("data", JSON.stringify(data));
-}
+function save(){ localStorage.setItem("data",JSON.stringify(data)); }
 
 function addWork(){
-  let date = document.getElementById("date").value;
-  let hours = parseFloat(document.getElementById("hours").value);
+  let d=date.value;
+  let h=parseFloat(hours.value);
 
-  if (!date || !hours) return alert("Enter all");
+  if(!d||!h) return alert("Enter!");
 
-  let d = new Date(date);
-  if (d.getDay() === 0) return alert("No Sunday");
+  if(new Date(d).getDay()===0) return alert("Sunday ❌");
 
-  if (hours < 5) alert("NO WORRY BRO WE CAN KEEP IT FUTURE DAYS");
-  else if (hours < 6) alert("GOOD BRO");
-  else if (hours > 10) alert("PWOLI BRO 🔥");
-  else if (hours > 8) alert("GREAT BRO 💪");
+  if(h<5) alert("NO WORRY BRO");
+  else if(h<6) alert("GOOD BRO");
+  else if(h>10) alert("PWOLI BRO");
+  else if(h>8) alert("GREAT BRO");
 
-  data.push({date, hours});
-  save();
-  render();
-}
-
-function editItem(i){
-  let h = prompt("Edit hours", data[i].hours);
-  if (h){
-    data[i].hours = parseFloat(h);
-    save();
-    render();
-  }
-}
-
-function deleteItem(i){
-  data.splice(i,1);
-  save();
-  render();
+  data.push({date:d,hours:h});
+  save(); render();
 }
 
 function render(){
-  let total = 0;
-  let log = document.getElementById("log");
-  log.innerHTML = "";
 
-  let month = currentDate.getMonth();
-  let year = currentDate.getFullYear();
+  let totalH=0;
+  let log=document.getElementById("log");
+  log.innerHTML="";
 
-  let filtered = data.filter(d => {
-    let dt = new Date(d.date);
-    return dt.getMonth() === month && dt.getFullYear() === year;
+  let m=currentDate.getMonth();
+  let y=currentDate.getFullYear();
+
+  let filtered=data.filter(d=>{
+    let dt=new Date(d.date);
+    return dt.getMonth()==m && dt.getFullYear()==y;
   });
 
   filtered.forEach((d,i)=>{
-    total += d.hours;
-    let li = document.createElement("li");
-    li.innerHTML = `${d.date} - ${d.hours}h 
-    <button onclick="editItem(${i})">✏️</button>
-    <button onclick="deleteItem(${i})">❌</button>`;
+    totalH+=d.hours;
+    let li=document.createElement("li");
+    li.innerText=`${d.date} - ${d.hours}h`;
     log.appendChild(li);
   });
 
-  document.getElementById("total").innerText = total;
-  document.getElementById("earn").innerText = (total*rate).toFixed(2);
+  document.getElementById("total").innerText=totalH;
+  document.getElementById("earn").innerText=(totalH*rate).toFixed(2);
 
-  let avg = total/(filtered.length||1);
-  let predict = avg*26;
-  document.getElementById("predict").innerText = (predict*rate).toFixed(2);
+  let avg=totalH/(filtered.length||1);
+  document.getElementById("predict").innerText=(avg*26*rate).toFixed(2);
 
-  document.getElementById("bar").style.width = (total/target*100)+"%";
+  bar.style.width=(totalH/target*100)+"%";
 
-  let monthName = currentDate.toLocaleString('default',{month:'long',year:'numeric'});
-  document.getElementById("monthTitle").innerText = monthName;
+  monthTitle.innerText=currentDate.toLocaleString('default',{month:'long',year:'numeric'});
 
-  renderCalendar(filtered, month, year);
+  renderCalendar(filtered,m,y);
+  generateAnalytics(filtered);
+  generateGoal(filtered);
+  generateMoney(filtered);
+  calculateStreak(filtered);
+  generateBadges(totalH);
 }
 
-function renderCalendar(data, month, year){
-  let cal = document.getElementById("calendar");
-  cal.innerHTML = "";
-
-  let days = new Date(year, month+1, 0).getDate();
+// CALENDAR
+function renderCalendar(data,m,y){
+  calendar.innerHTML="";
+  let days=new Date(y,m+1,0).getDate();
 
   for(let i=1;i<=days;i++){
-    let div = document.createElement("div");
+    let div=document.createElement("div");
     div.className="day";
-
-    let found = data.find(d=> new Date(d.date).getDate()===i);
-    if(found) div.classList.add("worked");
-
+    if(data.find(d=>new Date(d.date).getDate()==i)) div.classList.add("worked");
     div.innerText=i;
-    cal.appendChild(div);
+    calendar.appendChild(div);
   }
 }
 
-function toggleTheme(){
-  document.body.classList.toggle("light");
+// ANALYTICS
+let chart;
+function generateAnalytics(data){
+  let days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  let weekly=[0,0,0,0,0,0,0];
+
+  data.forEach(d=> weekly[new Date(d.date).getDay()]+=d.hours);
+
+  let max=Math.max(...weekly);
+  bestDay.innerText = max>0 ? `🔥 Best day: ${days[weekly.indexOf(max)]}`:"No data";
+
+  if(chart) chart.destroy();
+  chart=new Chart(weeklyChart,{type:"bar",data:{labels:days,datasets:[{data:weekly}]}});
 }
 
+// GOAL GRAPH
+let goalChart;
+function generateGoal(data){
+  let total=0, arr=[], labels=[];
+  data.sort((a,b)=>new Date(a.date)-new Date(b.date));
 
-// =======================
-// 🚌 BUS TIMETABLE SETUP
-// =======================
-
-// Weekdays (Mon–Fri)
-const toWorkWeekday = [
-  "05:38","06:08","06:38","07:08","07:38","08:08"
-];
-
-const toHomeWeekday = [
-  "15:48","16:18","16:48","17:18","17:48","18:18","18:48"
-];
-
-// Saturday
-const toWorkSaturday = [
-  "06:08","07:08","08:08","09:08"
-];
-
-const toHomeSaturday = [
-  "13:38","15:08","17:08","20:08"
-];
-
-// =======================
-// ⏱️ GET LIVE BUS (COUNTDOWN)
-// =======================
-function getLiveBus(times){
-  let now = new Date();
-  let current = now.getHours()*60 + now.getMinutes();
-
-  for(let t of times){
-    let [h,m] = t.split(":");
-    let busTime = parseInt(h)*60 + parseInt(m);
-
-    let diff = busTime - current;
-
-    if(diff > 0){
-      if(diff <= 1) return `🟢 Bus arriving now`;
-      if(diff < 5) return `⚡ Bus in ${diff} min`;
-      return `🚌 Bus in ${diff} min (${t})`;
-    }
-  }
-
-  return "❌ No more buses today";
-}
-
-// =======================
-// 🧠 SMART LOGIC (DAY + TIME)
-// =======================
-function updateBus(){
-  let now = new Date();
-  let day = now.getDay(); // 0=Sun, 6=Sat
-  let hour = now.getHours();
-
-  let message = "";
-
-  // ❌ Sunday
-  if(day === 0){
-    message = "😴 Sunday bro — no work";
-  }
-
-  // 🟡 Saturday
-  else if(day === 6){
-    if(hour < 12){
-      message = "🚌 Saturday Work: " + getLiveBus(toWorkSaturday);
-    } else {
-      message = "🏠 Saturday Home: " + getLiveBus(toHomeSaturday);
-    }
-  }
-
-  // 🟢 Weekdays
-  else {
-    if(hour < 12){
-      message = "🚀 Work Bus: " + getLiveBus(toWorkWeekday);
-    } else {
-      message = "🏠 Home Bus: " + getLiveBus(toHomeWeekday);
-    }
-  }
-
-  document.getElementById("busInfo").innerText = message;
-}
-
-// =======================
-// 🔁 AUTO UPDATE
-// =======================
-setInterval(updateBus, 60000);
-updateBus();
-
-  
-// PDF
-function exportPDF(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  let month = currentDate.toLocaleString('default',{month:'long',year:'numeric'});
-
-  let total=0;
-  let y=20;
-
-  doc.text("WORK PAYSLIP",20,y); y+=10;
-  doc.text("Month: "+month,20,y); y+=10;
-
-  data.forEach(d=>{
+  data.forEach((d,i)=>{
     total+=d.hours;
-    doc.text(`${d.date} | ${d.hours}h | €${(d.hours*rate).toFixed(2)}`,20,y);
-    y+=7;
+    arr.push(total);
+    labels.push("Day "+(i+1));
   });
 
-  y+=10;
-  doc.text("Total: "+total+" hrs",20,y); y+=7;
-  doc.text("Earnings: €"+(total*rate).toFixed(2),20,y);
+  goalMsg.innerText = total>=target ? "🔥 Completed!" : `${target-total} hrs left`;
 
-  doc.save("Payslip_"+month+".pdf");
+  if(goalChart) goalChart.destroy();
+  goalChart=new Chart(goalChartCanvas={ctx:goalChart?.ctx||document.getElementById("goalChart")},{type:"line",data:{labels:labels,datasets:[{data:arr},{data:Array(arr.length).fill(target)}]}});
 }
 
-  
+// MONEY GRAPH
+let moneyChart;
+function generateMoney(data){
+  let total=0, arr=[], labels=[];
+  data.forEach((d,i)=>{
+    total+=d.hours*rate;
+    arr.push(total);
+    labels.push("Day "+(i+1));
+  });
+
+  if(moneyChart) moneyChart.destroy();
+  moneyChart=new Chart(moneyChartCanvas={ctx:moneyChart?.ctx||document.getElementById("moneyChart")},{type:"line",data:{labels:labels,datasets:[{data:arr}]}});
+}
+
+// STREAK
+function calculateStreak(data){
+  let sorted=[...data].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let streak=1;
+
+  for(let i=1;i<sorted.length;i++){
+    let prev=new Date(sorted[i-1].date);
+    let curr=new Date(sorted[i].date);
+
+    let diff=(curr-prev)/(1000*60*60*24);
+
+    if(diff===1) streak++;
+    else streak=1;
+  }
+
+  document.getElementById("streak").innerText=streak;
+}
+
+// BADGES
+function generateBadges(total){
+  let text="";
+  if(total>200) text+="🔥 Hard Worker ";
+  if(total>300) text+="💪 Beast Mode ";
+  if(total>400) text+="👑 King ";
+  badges.innerText=text||"No badges yet";
+}
+
+// BUS
+const toWork=["05:38","06:08","06:38","07:08"];
+const toHome=["15:48","16:18","17:18","18:18"];
+
+function getBus(times){
+  let now=new Date();
+  let current=now.getHours()*60+now.getMinutes();
+
+  for(let t of times){
+    let [h,m]=t.split(":");
+    let bus=parseInt(h)*60+parseInt(m);
+    let diff=bus-current;
+
+    if(diff>0){
+      if(diff<=1) return "Arriving";
+      return `Bus in ${diff} min`;
+    }
+  }
+  return "No buses";
+}
+
+function updateBus(){
+  busInfo.innerText=new Date().getHours()<12 ? getBus(toWork) : getBus(toHome);
+}
+
+setInterval(updateBus,60000);
+updateBus();
+
+// MISC
+function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); render(); }
+function toggleTheme(){ document.body.classList.toggle("light"); }
+
+function exportPDF(){
+  const { jsPDF } = window.jspdf;
+  let doc=new jsPDF();
+  doc.text("Payslip",20,20);
+  doc.save("Payslip.pdf");
+}
+
 // PWA
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
