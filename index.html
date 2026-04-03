@@ -75,9 +75,12 @@ button {
   text-align: center;
   border-radius: 8px;
   background: #334155;
+  transition: 0.3s;
 }
 
-.worked { background: green; }
+.day:hover {
+  transform: scale(1.1);
+}
 
 .nav {
   display: flex;
@@ -147,7 +150,6 @@ let rate = localStorage.getItem("rate") || 8;
 let target = localStorage.getItem("target") || 200;
 let data = JSON.parse(localStorage.getItem("data")) || [];
 
-// MONTH CONTROL
 let currentDate = new Date();
 
 document.getElementById("rate").value = rate;
@@ -178,6 +180,12 @@ function addWork(){
 
   let d = new Date(date);
   if (d.getDay() === 0) return alert("No Sunday");
+
+  if(hours <= 0 || hours > 16) return alert("Invalid hours");
+
+  if(data.some(d => d.date === date)){
+    return alert("Already added bro");
+  }
 
   if (hours < 5) alert("NO WORRY BRO WE CAN KEEP IT FUTURE DAYS");
   else if (hours < 6) alert("GOOD BRO");
@@ -217,21 +225,29 @@ function render(){
     return dt.getMonth() === month && dt.getFullYear() === year;
   });
 
-  filtered.forEach((d,i)=>{
+  filtered.forEach((d)=>{
     total += d.hours;
+    let realIndex = data.findIndex(x => x.date === d.date && x.hours === d.hours);
+
     let li = document.createElement("li");
     li.innerHTML = `${d.date} - ${d.hours}h 
-    <button onclick="editItem(${i})">✏️</button>
-    <button onclick="deleteItem(${i})">❌</button>`;
+    <button onclick="editItem(${realIndex})">✏️</button>
+    <button onclick="deleteItem(${realIndex})">❌</button>`;
     log.appendChild(li);
   });
 
   document.getElementById("total").innerText = total;
   document.getElementById("earn").innerText = (total*rate).toFixed(2);
 
-  let avg = total/(filtered.length||1);
-  let predict = avg*26;
-  document.getElementById("predict").innerText = (predict*rate).toFixed(2);
+  let workingDays = filtered.length;
+
+  if(workingDays < 5){
+    document.getElementById("predict").innerText = "Not enough data";
+  } else {
+    let avg = total / workingDays;
+    let predict = avg * 26;
+    document.getElementById("predict").innerText = (predict * rate).toFixed(2);
+  }
 
   document.getElementById("bar").style.width = (total/target*100)+"%";
 
@@ -252,7 +268,20 @@ function renderCalendar(data, month, year){
     div.className="day";
 
     let found = data.find(d=> new Date(d.date).getDate()===i);
-    if(found) div.classList.add("worked");
+
+    if(found){
+      if(found.hours >= 10){
+        div.style.background = "purple";
+      } 
+      else if(found.hours >= 8){
+        div.style.background = "green";
+      } 
+      else if(found.hours >= 5){
+        div.style.background = "gold";
+      }
+
+      div.title = `${found.hours} hours worked`;
+    }
 
     div.innerText=i;
     cal.appendChild(div);
@@ -263,32 +292,12 @@ function toggleTheme(){
   document.body.classList.toggle("light");
 }
 
+// BUS SYSTEM (same as yours)
+const toWorkWeekday = ["05:38","05:53","06:08","06:23","06:41","06:56","07:11","07:26","7:38","08:08","08:38","08:53","09:08","09:38","10:08"];
+const toHomeWeekday = ["15:48","16:18","16:48","17:18","17:48","18:18","18:48"];
+const toWorkSaturday = ["06:08","07:08","09:08","12:08"];
+const toHomeSaturday = ["13:38","15:08","17:08","20:08","22:08"];
 
-// =======================
-// 🚌 BUS TIMETABLE SETUP
-// =======================
-
-// Weekdays (Mon–Fri)
-const toWorkWeekday = [
-  "05:38","05:53","06:08","06:23","06:41","06:56","07:11","07:26","7:38","08:08","08:38","08:53","09:08","09:38","10:08"
-];
-
-const toHomeWeekday = [
-  "15:48","16:18","16:48","17:18","17:48","18:18","18:48"
-];
-
-// Saturday
-const toWorkSaturday = [
-  "06:08","07:08","09:08","12:08"
-];
-
-const toHomeSaturday = [
-  "13:38","15:08","17:08","20:08","22:08"
-];
-
-// =======================
-// ⏱️ GET LIVE BUS (COUNTDOWN)
-// =======================
 function getLiveBus(times){
   let now = new Date();
   let current = now.getHours()*60 + now.getMinutes();
@@ -296,7 +305,6 @@ function getLiveBus(times){
   for(let t of times){
     let [h,m] = t.split(":");
     let busTime = parseInt(h)*60 + parseInt(m);
-
     let diff = busTime - current;
 
     if(diff > 0){
@@ -305,54 +313,36 @@ function getLiveBus(times){
       return `🚌 Bus in ${diff} min (${t})`;
     }
   }
-
   return "❌ No more buses today";
 }
 
-// =======================
-// 🧠 SMART LOGIC (DAY + TIME)
-// =======================
 function updateBus(){
   let now = new Date();
-  let day = now.getDay(); // 0=Sun, 6=Sat
+  let day = now.getDay();
   let hour = now.getHours();
 
   let message = "";
 
-  // ❌ Sunday
   if(day === 0){
     message = "😴 Sunday bro — no work";
   }
-
-  // 🟡 Saturday
   else if(day === 6){
-    if(hour < 12){
-      message = "🚌 Saturday Work: " + getLiveBus(toWorkSaturday);
-    } else {
-      message = "🏠 Saturday Home: " + getLiveBus(toHomeSaturday);
-    }
+    message = hour < 12 
+      ? "🚌 Saturday Work: " + getLiveBus(toWorkSaturday)
+      : "🏠 Saturday Home: " + getLiveBus(toHomeSaturday);
   }
-
-  // 🟢 Weekdays
   else {
-    if(hour < 12){
-      message = "🚀 Work Bus: " + getLiveBus(toWorkWeekday);
-    } else {
-      message = "🏠 Home Bus: " + getLiveBus(toHomeWeekday);
-    }
+    message = hour < 12 
+      ? "🚀 Work Bus: " + getLiveBus(toWorkWeekday)
+      : "🏠 Home Bus: " + getLiveBus(toHomeWeekday);
   }
 
   document.getElementById("busInfo").innerText = message;
 }
 
-// =======================
-// 🔁 AUTO UPDATE
-// =======================
 setInterval(updateBus, 60000);
 updateBus();
 
-  
-// PDF
 function exportPDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -365,7 +355,12 @@ function exportPDF(){
   doc.text("WORK PAYSLIP",20,y); y+=10;
   doc.text("Month: "+month,20,y); y+=10;
 
-  data.forEach(d=>{
+  let filtered = data.filter(d=>{
+    let dt=new Date(d.date);
+    return dt.getMonth()===currentDate.getMonth() && dt.getFullYear()===currentDate.getFullYear();
+  });
+
+  filtered.forEach(d=>{
     total+=d.hours;
     doc.text(`${d.date} | ${d.hours}h | €${(d.hours*rate).toFixed(2)}`,20,y);
     y+=7;
@@ -378,8 +373,6 @@ function exportPDF(){
   doc.save("Payslip_"+month+".pdf");
 }
 
-  
-// PWA
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
 }
@@ -390,5 +383,3 @@ render();
 
 </body>
 </html>
-
-
