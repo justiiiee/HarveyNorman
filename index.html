@@ -253,8 +253,27 @@ if(required <= 0){
 }
   let avg = total / (filtered.length || 1);
 let daysLeft = required / avg;
-  document.getElementById("bar").style.width = (total/target*100)+"%";
+  let percent = (total / target) * 100;
+let bar = document.getElementById("bar");
 
+// Smooth width update
+setTimeout(() => {
+  bar.style.width = percent + "%";
+}, 100);
+
+// Dynamic color (extra premium feel)
+if(percent < 40){
+  bar.style.background = "linear-gradient(to right, #ef4444, #f87171)";
+}
+else if(percent < 70){
+  bar.style.background = "linear-gradient(to right, #facc15, #fde047)";
+}
+else{
+  bar.style.background = "linear-gradient(to right, #22c55e, #4ade80)";
+}
+
+// Show percentage inside bar
+bar.innerText = Math.floor(percent) + "%";
   let monthName = currentDate.toLocaleString('default',{month:'long',year:'numeric'});
   document.getElementById("monthTitle").innerText = monthName;
 
