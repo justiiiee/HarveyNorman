@@ -117,7 +117,7 @@ button {
 <h3>Summary</h3>
 <p>Total Hours: <span id="total"></span></p>
 <p>Earnings: €<span id="earn"></span></p>
-<p>Prediction: €<span id="predict"></span></p>
+<p>Required Hours: <span id="required"></span></p>
 <div class="progress"><div class="progress-bar" id="bar"></div></div>
 </div>
 
@@ -188,9 +188,9 @@ function addWork(){
   }
 
   if (hours < 5) alert("NO WORRY BRO WE CAN KEEP IT FUTURE DAYS");
-  else if (hours < 6) alert("GOOD BRO");
-  else if (hours > 10) alert("PWOLI BRO 🔥");
-  else if (hours > 8) alert("GREAT BRO 💪");
+  else if (hours < 6) alert("DAEY ITH ENTHUNN");
+  else if (hours > 10) alert("KOLLA MASS 🔥");
+  else if (hours > 8) alert("ALIYA MASS 💪");
 
   data.push({date, hours});
   save();
@@ -238,17 +238,15 @@ function render(){
 
   document.getElementById("total").innerText = total;
   document.getElementById("earn").innerText = (total*rate).toFixed(2);
+let required = target - total;
 
-  let workingDays = filtered.length;
-
-  if(workingDays < 5){
-    document.getElementById("predict").innerText = "Not enough data";
-  } else {
-    let avg = total / workingDays;
-    let predict = avg * 26;
-    document.getElementById("predict").innerText = (predict * rate).toFixed(2);
-  }
-
+if(required <= 0){
+  document.getElementById("required").innerText = "0 (Target reached 🎉)";
+} else {
+  document.getElementById("required").innerText = required.toFixed(1) + " hrs";
+}
+  let avg = total / (filtered.length || 1);
+let daysLeft = required / avg;
   document.getElementById("bar").style.width = (total/target*100)+"%";
 
   let monthName = currentDate.toLocaleString('default',{month:'long',year:'numeric'});
