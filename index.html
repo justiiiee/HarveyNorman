@@ -25,6 +25,7 @@
 }
 
 body {
+  <audio id="workSound" src="success.mp3"></audio>
   font-family: Arial;
   background: var(--bg);
   color: var(--text);
@@ -199,8 +200,16 @@ function addWork(){
   else if (hours > 8) alert("ALIYA MASS 💪");
 
   data.push({date, hours});
-  save();
-  render();
+
+// 🔊 PLAY SOUND
+let sound = document.getElementById("workSound");
+if(sound){
+  sound.currentTime = 0; // restart if clicked fast
+  sound.play();
+}
+
+save();
+render();
 }
 
 function editItem(i){
