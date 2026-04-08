@@ -245,19 +245,7 @@ if(required <= 0){
 } else {
   document.getElementById("required").innerText = required.toFixed(1) + " hrs";
 }
- // SMART WARNINGS SYSTEM
-if(filtered.length > 3){ // avoid early spam
-  if(avg < 5){
-    setTimeout(()=>{
-      alert("⚠️ You’re slowing down bro… let’s push 💪");
-    }, 300);
-  }
-  else if(avg > 10){
-    setTimeout(()=>{
-      alert("⚠️ Careful bro, burnout incoming 😵");
-    }, 300);
-  }
-}
+  let avg = total / (filtered.length || 1);
 let daysLeft = required / avg;
   document.getElementById("bar").style.width = (total/target*100)+"%";
 
@@ -280,31 +268,20 @@ function renderCalendar(data, month, year){
     let found = data.find(d=> new Date(d.date).getDate()===i);
 
     if(found){
-      let emoji = "";
-      
       if(found.hours >= 10){
-        div.style.background = "linear-gradient(135deg, #7c3aed, #c084fc)";
-        emoji = "🔥";
+        div.style.background = "purple";
       } 
       else if(found.hours >= 8){
-        div.style.background = "linear-gradient(135deg, #16a34a, #4ade80)";
-        emoji = "💪";
+        div.style.background = "green";
       } 
       else if(found.hours >= 5){
-        div.style.background = "linear-gradient(135deg, #facc15, #fde047)";
-        emoji = "😐";
-      } 
-      else {
-        div.style.background = "linear-gradient(135deg, #475569, #64748b)";
-        emoji = "🥶";
+        div.style.background = "gold";
       }
 
-      div.innerHTML = `${i}<br>${emoji}`;
       div.title = `${found.hours} hours worked`;
-    } else {
-      div.innerText = i;
     }
 
+    div.innerText=i;
     cal.appendChild(div);
   }
 }
@@ -403,4 +380,4 @@ render();
 </script>
 
 </body>
-</html>
+</html> 
