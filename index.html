@@ -315,7 +315,15 @@ function renderCalendar(data, month, year){
       div.title = `${found.hours} hours worked`;
     }
 
-    div.innerText=i;
+   div.innerText = i;
+
+div.onclick = () => {
+  if(found){
+    alert(`📅 ${found.date}\n⏱ Worked: ${found.hours} hours\n💰 Earned: €${(found.hours * rate).toFixed(2)}`);
+  } else {
+    alert(`📅 ${year}-${month+1}-${i}\n❌ No work logged`);
+  }
+};
     cal.appendChild(div);
   }
 }
