@@ -25,7 +25,7 @@
 }
 
 body {
-  <audio id="workSound" src="success.mp3"></audio>
+  
   font-family: Arial;
   background: var(--bg);
   color: var(--text);
@@ -99,7 +99,7 @@ button {
 </head>
 
 <body>
-
+<audio id="workSound" src="success.mp3"></audio>
 <h1>💼 Work Tracker 2.O</h1>
 
 <div class="box">
@@ -318,6 +318,9 @@ function renderCalendar(data, month, year){
    div.innerText = i;
 
 div.onclick = () => {
+  if(found){
+  div.innerHTML = `<strong>${i}</strong><br><small>${found.hours}h</small>`;
+}
   if(found){
     alert(`📅 ${found.date}\n⏱ Worked: ${found.hours} hours\n💰 Earned: €${(found.hours * rate).toFixed(2)}`);
   } else {
