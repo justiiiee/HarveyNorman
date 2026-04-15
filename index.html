@@ -270,6 +270,18 @@ setTimeout(() => {
   bar.style.width = percent + "%";
 }, 100);
 
+function checkReminder(){
+  let today = new Date().toISOString().split("T")[0];
+  let exists = data.some(d => d.date === today);
+
+  if(!exists){
+    alert("⚠️ Bro, you didn’t log today’s work!");
+  }
+}
+
+// run once when app opens
+checkReminder();
+  
 // Dynamic color (extra premium feel)
 if(percent < 40){
   bar.style.background = "linear-gradient(to right, #ef4444, #f87171)";
